@@ -10,4 +10,5 @@ frontend/dist/
 .DS_Store
 models/
 data/
+heldout
 scripts/keepawake.ps1

@@ -120,7 +120,8 @@ def run_finetune(args: argparse.Namespace) -> None:
         print("Please run backend.scripts.build_finetune_dataset first.")
         sys.exit(1)
 
-    args.project.mkdir(parents=True, exist_ok=True)
+    project_dir = args.project.resolve()
+    project_dir.mkdir(parents=True, exist_ok=True)
 
     cache_val: str | bool = False
     if args.cache:
@@ -138,11 +139,11 @@ def run_finetune(args: argparse.Namespace) -> None:
     print(f"Device:    {args.device}")
     print(f"Workers:   {args.workers}")
     print(f"Learning:  lr0={args.lr0}, cos_lr=True, patience={args.patience}")
-    print(f"Output:    {args.project / args.name}")
+    print(f"Output:    {project_dir / args.name}")
     print("=" * 60)
 
     if args.resume:
-        last_pt = args.project / args.name / "weights" / "last.pt"
+        last_pt = project_dir / args.name / "weights" / "last.pt"
         if not last_pt.exists():
             print(f"Error: Cannot resume -- '{last_pt}' does not exist.")
             sys.exit(1)
@@ -160,7 +161,7 @@ def run_finetune(args: argparse.Namespace) -> None:
             workers=args.workers,
             fraction=args.fraction,
             name=args.name,
-            project=str(args.project),
+            project=str(project_dir),
             lr0=args.lr0,
             cos_lr=True,
             patience=args.patience,
@@ -172,11 +173,11 @@ def run_finetune(args: argparse.Namespace) -> None:
             verbose=True,
         )
 
-    best_pt = args.project / args.name / "weights" / "best.pt"
+    best_pt = project_dir / args.name / "weights" / "best.pt"
     if best_pt.exists():
         print(f"\nTraining completed successfully! Best weights: {best_pt}")
     else:
-        print(f"\nRun ended. Check {args.project / args.name}")
+        print(f"\nRun ended. Check {project_dir / args.name}")
 
 
 if __name__ == "__main__":
