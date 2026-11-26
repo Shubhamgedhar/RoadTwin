@@ -47,6 +47,7 @@ def evaluate_source(
     # Generate a temporary data YAML pointing directly to this source's test set
     with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False) as f:
         yaml_content = f"""path: {test_dir.resolve().as_posix()}
+train: images
 val: images
 names:
   0: D00
