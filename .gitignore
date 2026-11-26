@@ -8,3 +8,6 @@ backend/.env
 node_modules/
 frontend/dist/
 .DS_Store
+models/
+data/
+scripts/keepawake.ps1
