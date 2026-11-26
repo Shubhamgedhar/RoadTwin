@@ -138,59 +138,39 @@ def extract_countries(
     requested_countries: Sequence[str],
 ) -> None:
     """Extract specified countries into data/rdd2022/<Country>/..."""
-    with zipfile.ZipFile(zip_path, "r") as zf:
-        all_members = zf.namelist()
+    with zipfile.ZipFile(zip_path, "r") as outer:
+        all_members = outer.namelist()
 
-        # Find available country folders from member names
-        # Format in zip: RDD2022/<Country>/... or <Country>/...
-        available_countries = set()
+        # Build mapping of country name -> member path (e.g. 'India' -> 'RDD2022/India.zip')
+        country_map = {}
         for member in all_members:
-            parts = Path(member).parts
-            if len(parts) >= 2 and parts[0] == "RDD2022":
-                available_countries.add(parts[1])
-            elif len(parts) >= 1 and parts[0] in ALL_COUNTRIES:
-                available_countries.add(parts[0])
+            if member.endswith(".zip"):
+                c_name = Path(member).stem
+                country_map[c_name] = member
 
         # Validate requested countries
-        invalid = [c for c in requested_countries if c not in available_countries]
+        invalid = [c for c in requested_countries if c not in country_map]
         if invalid:
             print(f"Error: Requested countries {invalid} not found in archive.")
-            print(f"Available countries in archive central directory: {sorted(available_countries)}")
+            print(f"Available countries in archive central directory: {sorted(country_map.keys())}")
             sys.exit(1)
 
         print(f"Extracting {len(requested_countries)} countries: {list(requested_countries)}...")
         for country in requested_countries:
-            prefix_with_rdd = f"RDD2022/{country}/"
-            prefix_without = f"{country}/"
+            member = country_map[country]
+            target_country_train = out_dir / country / "train"
+            if target_country_train.exists() and any(target_country_train.iterdir()):
+                print(f"  Country '{country}' train data already exists at {target_country_train}. Skipping extraction.")
+                continue
 
-            country_members = [
-                m for m in all_members
-                if m.startswith(prefix_with_rdd) or m.startswith(prefix_without)
-            ]
-
-            print(f"  Extracting {country} ({len(country_members)} files)...")
-            for member in country_members:
-                # Target path: out_dir / country / subpath
-                parts = Path(member).parts
-                if parts[0] == "RDD2022":
-                    relative_parts = parts[1:]  # (country, train, ...)
-                else:
-                    relative_parts = parts
-
-                target_file = out_dir.joinpath(*relative_parts)
-                if member.endswith("/"):
-                    target_file.mkdir(parents=True, exist_ok=True)
-                else:
-                    target_file.parent.mkdir(parents=True, exist_ok=True)
-                    if not target_file.exists() or target_file.stat().st_size == 0:
-                        with zf.open(member) as source_f, open(target_file, "wb") as dest_f:
-                            while True:
-                                chunk = source_f.read(1024 * 1024)
-                                if not chunk:
-                                    break
-                                dest_f.write(chunk)
+            print(f"  Extracting {country} from {member}...")
+            with outer.open(member) as inner_stream:
+                with zipfile.ZipFile(inner_stream) as inner_zip:
+                    # Extract train split (with annotations and images) into out_dir
+                    inner_zip.extractall(out_dir)
 
     print("Extraction complete.")
+
 
 
 def main(argv: Sequence[str] | None = None) -> None:
